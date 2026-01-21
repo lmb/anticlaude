@@ -17,6 +17,37 @@ Claudette is a containerized version of Anthropic's Claude Code CLI that:
 - An Anthropic API key (will be configured on first run)
 - Sufficient permissions to build containers and mount volumes
 
+### NixOS
+
+Add the following to configuration.nix to enable podman:
+
+```
+  # Enable Podman for container management
+  virtualisation.podman = {
+    enable = true;
+    
+    # Create a `docker` alias for podman, to use it as a drop-in replacement
+    dockerCompat = true;
+    
+    # Required for containers under podman-compose to be able to talk to each other.
+    defaultNetwork.settings.dns_enabled = true;
+  };
+
+  # Configure container registries
+  virtualisation.containers.registries.search = [
+    "docker.io"
+    "quay.io"
+    "ghcr.io"
+  ];
+
+  # Optional: Add your user to the podman group for rootless containers
+  users.users.$USER = {
+    isNormalUser = true;
+    uid = 1000;
+    extraGroups = [ "wheel" "networkmanager" "podman" ]; # added "podman"
+  };
+```
+
 ## Building the Container
 
 Build the container image from the repo root using either Docker or Podman:
