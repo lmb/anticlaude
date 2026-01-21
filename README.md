@@ -1,6 +1,6 @@
 # Anticlaude - Containerized Claude Code CLI
 
-A Docker/Podman container for running the Claude Code CLI in an isolated, reproducible environment. This container provides a consistent development experience across different systems while maintaining separation between your host system and Claude Code's dependencies.
+A Podman container for running the Claude Code CLI in an isolated, reproducible environment. This container provides a consistent development experience across different systems while maintaining separation between your host system and Claude Code's dependencies.
 
 ## Overview
 
@@ -13,7 +13,7 @@ Anticlaude is a containerized version of Anthropic's Claude Code CLI that:
 
 ## Prerequisites
 
-- Docker or Podman installed on your system
+- Podman installed on your system
 - An Anthropic API key (will be configured on first run)
 - Sufficient permissions to build containers and mount volumes
 
@@ -25,9 +25,6 @@ Add the following to configuration.nix to enable podman:
   # Enable Podman for container management
   virtualisation.podman = {
     enable = true;
-
-    # Create a `docker` alias for podman, to use it as a drop-in replacement
-    dockerCompat = true;
 
     # Required for containers under podman-compose to be able to talk to each other.
     defaultNetwork.settings.dns_enabled = true;
@@ -50,14 +47,10 @@ Add the following to configuration.nix to enable podman:
 
 ## Building the Container
 
-Build the container image from the repo root using either Docker or Podman:
+Build the container image from the repo root:
 
 ```bash
-# Using Podman
-podman build -t anticlaude .
-
-# Using Docker
-docker build -t anticlaude .
+./build.sh
 ```
 
 Re-run the command to update your version of claude.
@@ -75,11 +68,7 @@ The build process will:
 Create an alias for easy access:
 
 ```bash
-# Using Podman
 alias anticlaude="podman run --userns=keep-id -it --rm -v \$HOME/.claude:/home/anticlaude/.claude:z -v \$(pwd):/home/anticlaude/workspace:z anticlaude:latest"
-
-# Using Docker
-alias anticlaude="docker run -it --rm -v \$HOME/.claude:/home/anticlaude/.claude -v \$(pwd):/home/anticlaude/workspace anticlaude:latest"
 ```
 
 Then run Claude Code from any directory:
@@ -97,16 +86,9 @@ On first run, Claude Code will prompt you to configure your API key. The configu
 You can also run the container without an alias:
 
 ```bash
-# Using Podman
 podman run --userns=keep-id -it --rm \
   -v $HOME/.claude:/home/anticlaude/.claude:z \
   -v $(pwd):/home/anticlaude/workspace:z \
-  anticlaude:latest
-
-# Using Docker
-docker run -it --rm \
-  -v $HOME/.claude:/home/anticlaude/.claude \
-  -v $(pwd):/home/anticlaude/workspace \
   anticlaude:latest
 ```
 
@@ -133,22 +115,20 @@ The container uses two volume mounts:
 - This matches the default user ID on most Linux systems
 - If your host user has a different UID/GID, you may encounter permission issues with mounted volumes
 
-### SELinux Considerations (Podman)
-- The `:z` suffix on volume mounts enables SELinux relabeling for Podman users
+### SELinux Considerations
+- The `:z` suffix on volume mounts enables SELinux relabeling
 - This allows the container to access mounted volumes on SELinux-enabled systems (Fedora, RHEL, CentOS, etc.)
-- Docker users should omit the `:z` suffix
 
-### User Namespace Mapping (Podman)
+### User Namespace Mapping
 - The `--userns=keep-id` flag preserves your host user ID inside the container
 - This ensures files created in mounted volumes have the correct ownership
-- Docker users don't need this flag as it handles user mapping differently
 
 ## Limitations
 
 ### UID/GID Mismatch
 If your host user ID is not 1000, you may need to:
 - Rebuild the container with your specific UID/GID in the Dockerfile
-- Use rootless Docker/Podman with user namespace mapping
+- Use rootless Podman with user namespace mapping
 - Adjust file permissions manually
 
 ### Network Access

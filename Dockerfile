@@ -38,6 +38,7 @@ USER ${USER}
 WORKDIR ${HOME}
 
 # Install Claude Code CLI
+ARG CLAUDE_CACHEBUST=1
 RUN curl -fsSL https://claude.ai/install.sh | /bin/bash
 
 # Add Claude Code to PATH
