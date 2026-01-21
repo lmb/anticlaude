@@ -46,15 +46,8 @@ ENV PATH="${HOME}/.local/bin:${PATH}"
 # Set Claude Code config directory to the mounted volume
 ENV CLAUDE_CLI_CONFIG_DIR=${CLAUDE_CONFIG_DIR}
 
-# Copy entrypoint script
-COPY --chown=${UID}:${GID} entrypoint.sh ${HOME}/entrypoint.sh
-RUN chmod +x ${HOME}/entrypoint.sh
-
 # Set entrypoint to run updates on container start
-ENTRYPOINT ["/bin/bash", "-c", "$HOME/entrypoint.sh"]
+ENTRYPOINT ["/home/claudette/.local/bin/claude", "--allow-dangerously-skip-permissions"]
 
 # Set working directory for projects
 WORKDIR ${HOME}/workspace
-
-# Default command
-CMD ["/bin/bash"]
