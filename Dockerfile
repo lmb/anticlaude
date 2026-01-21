@@ -48,7 +48,7 @@ ENV PATH="${HOME}/.local/bin:${PATH}"
 ENV CLAUDE_CLI_CONFIG_DIR=${CLAUDE_CONFIG_DIR}
 
 # Set entrypoint to run updates on container start
-ENTRYPOINT ["/home/anticlaude/.local/bin/claude", "--allow-dangerously-skip-permissions"]
+ENTRYPOINT ["/home/anticlaude/.local/bin/claude", "--dangerously-skip-permissions"]
 
 # Set working directory for projects
 WORKDIR ${HOME}/workspace
