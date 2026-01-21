@@ -76,10 +76,10 @@ Create an alias for easy access:
 
 ```bash
 # Using Podman
-alias anticlaude="podman run --userns=keep-id -it --rm -v \$HOME/claude-config:/home/anticlaude/.claude:z -v \$(pwd):/home/anticlaude/workspace:z anticlaude:latest"
+alias anticlaude="podman run --userns=keep-id -it --rm -v \$HOME/.claude:/home/anticlaude/.claude:z -v \$(pwd):/home/anticlaude/workspace:z anticlaude:latest"
 
 # Using Docker
-alias anticlaude="docker run -it --rm -v \$HOME/claude-config:/home/anticlaude/.claude -v \$(pwd):/home/anticlaude/workspace anticlaude:latest"
+alias anticlaude="docker run -it --rm -v \$HOME/.claude:/home/anticlaude/.claude -v \$(pwd):/home/anticlaude/workspace anticlaude:latest"
 ```
 
 Then run Claude Code from any directory:
@@ -90,7 +90,7 @@ anticlaude
 
 ### First Run
 
-On first run, Claude Code will prompt you to configure your API key. The configuration will be persisted in `$HOME/claude-config` on your host system.
+On first run, Claude Code will prompt you to configure your API key. The configuration will be persisted in `$HOME/.claude` on your host system.
 
 ### Manual Execution
 
@@ -99,13 +99,13 @@ You can also run the container without an alias:
 ```bash
 # Using Podman
 podman run --userns=keep-id -it --rm \
-  -v $HOME/claude-config:/home/anticlaude/.claude:z \
+  -v $HOME/.claude:/home/anticlaude/.claude:z \
   -v $(pwd):/home/anticlaude/workspace:z \
   anticlaude:latest
 
 # Using Docker
 docker run -it --rm \
-  -v $HOME/claude-config:/home/anticlaude/.claude \
+  -v $HOME/.claude:/home/anticlaude/.claude \
   -v $(pwd):/home/anticlaude/workspace \
   anticlaude:latest
 ```
@@ -115,7 +115,7 @@ docker run -it --rm \
 The container uses two volume mounts:
 
 ### 1. Configuration Directory
-- **Host Path**: `$HOME/claude-config`
+- **Host Path**: `$HOME/.claude`
 - **Container Path**: `/home/anticlaude/.claude`
 - **Purpose**: Stores Claude Code configuration, including API keys and settings
 - **Persistence**: Data persists across container restarts
@@ -177,14 +177,14 @@ The container requires internet access to:
 
 ### Permission Denied Errors
 If you encounter permission errors with volume mounts:
-- Check that `$HOME/claude-config` exists and is writable
+- Check that `$HOME/.claude` exists and is writable
 - Verify your user ID matches the container's UID (1000)
 - On SELinux systems, ensure the `:z` flag is used with Podman
 
 ### API Key Issues
 If Claude Code can't find your API key:
 - Ensure the config volume is properly mounted
-- Check that `$HOME/claude-config` contains your configuration
+- Check that `$HOME/.claude` contains your configuration
 - Try running `claude configure` inside the container
 
 ### Update Failures
