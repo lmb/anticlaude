@@ -6,10 +6,10 @@ RUN userdel -r ubuntu
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Set environment variables for non-root user
-ENV USER=claudette \
+ENV USER=anticlaude \
     UID=1000 \
     GID=1000 \
-    HOME=/home/claudette
+    HOME=/home/anticlaude
 
 # Set environment variables for mountpoints
 ENV CLAUDE_CONFIG_DIR=${HOME}/.claude \
@@ -47,7 +47,7 @@ ENV PATH="${HOME}/.local/bin:${PATH}"
 ENV CLAUDE_CLI_CONFIG_DIR=${CLAUDE_CONFIG_DIR}
 
 # Set entrypoint to run updates on container start
-ENTRYPOINT ["/home/claudette/.local/bin/claude", "--allow-dangerously-skip-permissions"]
+ENTRYPOINT ["/home/anticlaude/.local/bin/claude", "--allow-dangerously-skip-permissions"]
 
 # Set working directory for projects
 WORKDIR ${HOME}/workspace

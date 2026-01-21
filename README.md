@@ -1,10 +1,10 @@
-# Claudette - Containerized Claude Code CLI
+# Anticlaude - Containerized Claude Code CLI
 
 A Docker/Podman container for running the Claude Code CLI in an isolated, reproducible environment. This container provides a consistent development experience across different systems while maintaining separation between your host system and Claude Code's dependencies.
 
 ## Overview
 
-Claudette is a containerized version of Anthropic's Claude Code CLI that:
+Anticlaude is a containerized version of Anthropic's Claude Code CLI that:
 - Runs in an isolated Ubuntu-based environment
 - Automatically updates Claude Code on container startup
 - Preserves your Claude configuration across container restarts
@@ -25,10 +25,10 @@ Add the following to configuration.nix to enable podman:
   # Enable Podman for container management
   virtualisation.podman = {
     enable = true;
-    
+
     # Create a `docker` alias for podman, to use it as a drop-in replacement
     dockerCompat = true;
-    
+
     # Required for containers under podman-compose to be able to talk to each other.
     defaultNetwork.settings.dns_enabled = true;
   };
@@ -54,18 +54,19 @@ Build the container image from the repo root using either Docker or Podman:
 
 ```bash
 # Using Podman
-podman build -t claudette .
+podman build -t anticlaude .
 
 # Using Docker
-docker build -t claudette .
+docker build -t anticlaude .
 ```
+
+Re-run the command to update your version of claude.
 
 The build process will:
 1. Start from the latest Ubuntu base image
 2. Install required dependencies (curl, ca-certificates, git, python3)
-3. Create a non-root user `claudette` with UID/GID 1000
+3. Create a non-root user `anticlaude` with UID/GID 1000
 4. Install the Claude Code CLI
-5. Set up the entrypoint script for automatic updates
 
 ## Running the Container
 
@@ -75,16 +76,16 @@ Create an alias for easy access:
 
 ```bash
 # Using Podman
-alias claudette="podman run --userns=keep-id -it --rm -v \$HOME/claude-config:/home/claudette/.claude:z -v \$(pwd):/home/claudette/workspace:z claudette:latest"
+alias anticlaude="podman run --userns=keep-id -it --rm -v \$HOME/claude-config:/home/anticlaude/.claude:z -v \$(pwd):/home/anticlaude/workspace:z anticlaude:latest"
 
 # Using Docker
-alias claudette="docker run -it --rm -v \$HOME/claude-config:/home/claudette/.claude -v \$(pwd):/home/claudette/workspace claudette:latest"
+alias anticlaude="docker run -it --rm -v \$HOME/claude-config:/home/anticlaude/.claude -v \$(pwd):/home/anticlaude/workspace anticlaude:latest"
 ```
 
 Then run Claude Code from any directory:
 
 ```bash
-claudette
+anticlaude
 ```
 
 ### First Run
@@ -98,15 +99,15 @@ You can also run the container without an alias:
 ```bash
 # Using Podman
 podman run --userns=keep-id -it --rm \
-  -v $HOME/claude-config:/home/claudette/.claude:z \
-  -v $(pwd):/home/claudette/workspace:z \
-  claudette:latest
+  -v $HOME/claude-config:/home/anticlaude/.claude:z \
+  -v $(pwd):/home/anticlaude/workspace:z \
+  anticlaude:latest
 
 # Using Docker
 docker run -it --rm \
-  -v $HOME/claude-config:/home/claudette/.claude \
-  -v $(pwd):/home/claudette/workspace \
-  claudette:latest
+  -v $HOME/claude-config:/home/anticlaude/.claude \
+  -v $(pwd):/home/anticlaude/workspace \
+  anticlaude:latest
 ```
 
 ## Volume Mounts
@@ -115,20 +116,20 @@ The container uses two volume mounts:
 
 ### 1. Configuration Directory
 - **Host Path**: `$HOME/claude-config`
-- **Container Path**: `/home/claudette/.claude`
+- **Container Path**: `/home/anticlaude/.claude`
 - **Purpose**: Stores Claude Code configuration, including API keys and settings
 - **Persistence**: Data persists across container restarts
 
 ### 2. Workspace Directory
 - **Host Path**: `$(pwd)` (current working directory)
-- **Container Path**: `/home/claudette/workspace`
+- **Container Path**: `/home/anticlaude/workspace`
 - **Purpose**: Your project files that Claude Code will operate on
 - **Persistence**: Changes are reflected immediately on the host filesystem
 
 ## Configuration Assumptions
 
 ### User ID/Group ID
-- The container creates a user `claudette` with UID 1000 and GID 1000
+- The container creates a user `anticlaude` with UID 1000 and GID 1000
 - This matches the default user ID on most Linux systems
 - If your host user has a different UID/GID, you may encounter permission issues with mounted volumes
 
