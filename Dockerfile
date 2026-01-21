@@ -17,7 +17,7 @@ ENV CLAUDE_CONFIG_DIR=${HOME}/.claude \
 
 # Install dependencies
 RUN apt-get update && \
-    apt-get install -y \
+    apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
     git \
