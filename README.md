@@ -68,7 +68,7 @@ The build process will:
 Create an alias for easy access:
 
 ```bash
-alias anticlaude="podman run --userns=keep-id -it --rm -v \$HOME/.claude:/home/anticlaude/.claude:z -v \$(pwd):/home/anticlaude/workspace:z anticlaude:latest"
+alias anticlaude="podman run --userns=keep-id -it --rm -v \$HOME/.claude:/home/anticlaude/.claude:z -v \$(pwd):\$(pwd):z -w \$(pwd) anticlaude:latest"
 ```
 
 Then run Claude Code from any directory:
@@ -88,7 +88,8 @@ You can also run the container without an alias:
 ```bash
 podman run --userns=keep-id -it --rm \
   -v $HOME/.claude:/home/anticlaude/.claude:z \
-  -v $(pwd):/home/anticlaude/workspace:z \
+  -v $(pwd):$(pwd):z \
+  -w $(pwd) \
   anticlaude:latest
 ```
 
@@ -104,9 +105,10 @@ The container uses two volume mounts:
 
 ### 2. Workspace Directory
 - **Host Path**: `$(pwd)` (current working directory)
-- **Container Path**: `/home/anticlaude/workspace`
+- **Container Path**: `$(pwd)` (same as host path)
 - **Purpose**: Your project files that Claude Code will operate on
 - **Persistence**: Changes are reflected immediately on the host filesystem
+- **Note**: The container uses `-w $(pwd)` to set the working directory to match the host path, enabling Claude to categorize conversations by project path
 
 ## Configuration Assumptions
 
