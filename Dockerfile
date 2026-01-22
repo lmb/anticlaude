@@ -22,11 +22,13 @@ RUN apt-get update && \
     ca-certificates \
     git \
     python3 \
+    sudo \
     && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user
+# Create non-root user with passwordless sudo
 RUN groupadd -g ${GID} ${USER} && \
-    useradd -m -u ${UID} -g ${GID} -d ${HOME} -s /bin/bash ${USER}
+    useradd -m -u ${UID} -g ${GID} -d ${HOME} -s /bin/bash ${USER} && \
+    echo "${USER} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/${USER}
 
 # Create config directory mount point
 RUN mkdir -p ${CLAUDE_CONFIG_DIR} && chmod +x ${CLAUDE_CONFIG_DIR}

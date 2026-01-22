@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+set -x
+
+workdir="$(pwd)"
+
+if [[ "$workdir" == "$HOME"* ]]; then
+    name="${workdir#$HOME/}"
+else
+    name="${workdir#/}"
+fi
+name="anticlaude-${name//\//-}"
+name="${name:-anticlaude-home}"
+
+if podman container exists "$name" 2>/dev/null; then
+    state=$(podman inspect -f '{{.State.Status}}' "$name")
+    if [[ "$state" == "running" ]]; then
+        exec podman exec -it "$name" bash
+    else
+        exec podman start -ai "$name"
+    fi
+else
+    exec podman run --name "$name" --userns=keep-id -it \
+        -v "$HOME/.claude:/home/anticlaude/.claude:z" \
+        -v "$workdir:$workdir:z" -w "$workdir" \
+        anticlaude:latest
+fi

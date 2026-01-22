@@ -8,6 +8,7 @@ Anticlaude is a containerized version of Anthropic's Claude Code CLI that:
 - Runs in an isolated Ubuntu-based environment
 - Automatically updates Claude Code on container startup
 - Preserves your Claude configuration across container restarts
+- Creates persistent containers per working directory (installed packages survive sessions)
 - Mounts your current working directory as the workspace
 - Runs as a non-root user for security
 
@@ -65,10 +66,10 @@ The build process will:
 
 ### Quick Start
 
-Create an alias for easy access:
+Copy the `anticlaude` script to your PATH:
 
 ```bash
-alias anticlaude="podman run --userns=keep-id -it --rm -v \$HOME/.claude:/home/anticlaude/.claude:z -v \$(pwd):\$(pwd):z -w \$(pwd) anticlaude:latest"
+ln -s "$(pwd)/anticlaude" ~/.local/bin/anticlaude
 ```
 
 Then run Claude Code from any directory:
@@ -81,16 +82,39 @@ anticlaude
 
 On first run, Claude Code will prompt you to configure your API key. The configuration will be persisted in `$HOME/.claude` on your host system.
 
-### Manual Execution
+### Container Persistence
 
-You can also run the container without an alias:
+The `anticlaude` script creates persistent containers named after your working directory:
+
+| Working Directory | Container Name |
+|-------------------|----------------|
+| `~/dev/foo` | `anticlaude-dev-foo` |
+| `~/projects/bar` | `anticlaude-projects-bar` |
+| `/tmp/test` | `anticlaude-tmp-test` |
+| `~/` | `anticlaude-home` |
+
+This means packages installed inside a container persist across sessions for that directory.
+
+### Managing Containers
+
+List anticlaude containers:
 
 ```bash
-podman run --userns=keep-id -it --rm \
-  -v $HOME/.claude:/home/anticlaude/.claude:z \
-  -v $(pwd):$(pwd):z \
-  -w $(pwd) \
-  anticlaude:latest
+podman ps -a --filter "name=anticlaude-"
+```
+
+Remove a specific container:
+
+```bash
+podman rm anticlaude-dev-foo
+```
+
+### Ephemeral Mode
+
+If you prefer ephemeral containers that are removed on exit, use this alias instead:
+
+```bash
+alias anticlaude="podman run --userns=keep-id -it --rm -v \$HOME/.claude:/home/anticlaude/.claude:z -v \$(pwd):\$(pwd):z -w \$(pwd) anticlaude:latest"
 ```
 
 ## Volume Mounts
@@ -151,9 +175,10 @@ The container requires internet access to:
 - System-level tools on the host are not available inside the container
 
 ### Container Persistence
-- The container is designed to be ephemeral (uses `--rm` flag)
-- Only data in mounted volumes persists between runs
-- Packages or tools installed during a session will be lost when the container exits
+- The `anticlaude` script creates persistent containers per working directory
+- Packages installed inside a container persist across sessions
+- Use the ephemeral mode alias if you prefer containers that are removed on exit
+- Container data is stored in Podman's default location
 
 ## Troubleshooting
 
