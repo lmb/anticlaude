@@ -23,6 +23,7 @@ RUN apt-get update && \
     git \
     python3 \
     sudo \
+    nano \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user with passwordless sudo
@@ -45,6 +46,9 @@ RUN curl -fsSL https://claude.ai/install.sh | /bin/bash
 
 # Add Claude Code to PATH
 ENV PATH="${HOME}/.local/bin:${PATH}"
+
+# Allow better editing experience via ctrl-g
+ENV EDITOR=nano
 
 # Set Claude Code config directory to the mounted volume
 ENV CLAUDE_CLI_CONFIG_DIR=${CLAUDE_CONFIG_DIR}
