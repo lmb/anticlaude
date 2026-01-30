@@ -4,6 +4,11 @@ set -euo pipefail
 
 workdir="$(pwd)"
 
+if [[ -n "${STARDIR:-}" ]] && [[ "$workdir" == "$STARDIR" || "$workdir" == "$STARDIR/"* ]]; then
+    echo "Error: Cannot start anticlaude in STARDIR or its subdirectories" >&2
+    exit 1
+fi
+
 if [[ "$workdir" == "$HOME"* ]]; then
     name="${workdir#$HOME/}"
 else
