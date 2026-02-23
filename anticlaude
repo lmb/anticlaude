@@ -17,6 +17,8 @@ fi
 name="anticlaude-${name//\//-}"
 name="${name:-anticlaude-home}"
 
+mkdir -p "$HOME/.claude"
+
 if podman container exists "$name" 2>/dev/null; then
     state=$(podman inspect -f '{{.State.Status}}' "$name")
     if [[ "$state" == "running" ]]; then
