@@ -38,11 +38,6 @@ RUN chown -R ${UID}:${GID} ${WORKSPACE} ${CLAUDE_CONFIG_DIR}
 
 # Switch to non-root user
 USER ${USER}
-WORKDIR ${HOME}
-
-# Install Claude Code CLI
-ARG CLAUDE_CACHEBUST=1
-RUN curl -fsSL https://claude.ai/install.sh | /bin/bash
 
 # Add Claude Code to PATH
 ENV PATH="${HOME}/.local/bin:${PATH}"
@@ -53,8 +48,16 @@ ENV EDITOR=nano
 # Set Claude Code config directory to the mounted volume
 ENV CLAUDE_CLI_CONFIG_DIR=${CLAUDE_CONFIG_DIR}
 
+# Copy and set entrypoint script
+COPY --chown=${UID}:${GID} entrypoint.sh ${HOME}/entrypoint.sh
+RUN chmod +x ${HOME}/entrypoint.sh
+
 # Set entrypoint to run updates on container start
-ENTRYPOINT ["/home/anticlaude/.local/bin/claude", "--dangerously-skip-permissions"]
+ENTRYPOINT ["/home/anticlaude/entrypoint.sh"]
+
+# Install Claude Code CLI
+ARG CLAUDE_CACHEBUST=1
+RUN curl -fsSL https://claude.ai/install.sh | /bin/bash
 
 # Set working directory for projects
 WORKDIR ${HOME}/workspace
