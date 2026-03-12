@@ -19,16 +19,18 @@ name="${name:-anticlaude-home}"
 
 mkdir -p "$HOME/.claude"
 
+# Ensure container is running (detached)
 if podman container exists "$name" 2>/dev/null; then
     state=$(podman inspect -f '{{.State.Status}}' "$name")
-    if [[ "$state" == "running" ]]; then
-        exec podman exec -it "$name" bash
-    else
-        exec podman start -ai "$name"
+    if [[ "$state" != "running" ]]; then
+        podman start "$name" >/dev/null
     fi
 else
-    exec podman run --name "$name" --userns=keep-id -it \
+    podman run --name "$name" --userns=keep-id -d \
         -v "$HOME/.claude:/home/anticlaude/.claude:z" \
         -v "$workdir:$workdir:z" -w "$workdir" \
-        anticlaude:latest
+        anticlaude:latest >/dev/null
 fi
+
+# Start a claude session in the running container
+exec podman exec -it "$name" run-claude "$@"

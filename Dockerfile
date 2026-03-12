@@ -24,6 +24,7 @@ RUN apt-get update && \
     python3 \
     sudo \
     nano \
+    procps \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user with passwordless sudo
@@ -51,6 +52,10 @@ ENV CLAUDE_CLI_CONFIG_DIR=${CLAUDE_CONFIG_DIR}
 # Copy and set entrypoint script
 COPY --chown=${UID}:${GID} entrypoint.sh ${HOME}/entrypoint.sh
 RUN chmod +x ${HOME}/entrypoint.sh
+
+# Copy run-claude helper
+COPY --chown=${UID}:${GID} run-claude.sh /usr/local/bin/run-claude
+RUN chmod +x /usr/local/bin/run-claude
 
 # Set entrypoint to run updates on container start
 ENTRYPOINT ["/home/anticlaude/entrypoint.sh"]
