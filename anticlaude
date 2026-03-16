@@ -28,6 +28,8 @@ if podman container exists "$name" 2>/dev/null; then
 else
     podman run --name "$name" --userns=keep-id -d \
         -v "$HOME/.claude:/home/anticlaude/.claude:z" \
+        -v "$HOME/.gitconfig:/home/anticlaude/.gitconfig:ro,z" \
+        -v "$HOME/.config/git:/home/anticlaude/.config/git:ro,z" \
         -v "$workdir:$workdir:z" -w "$workdir" \
         anticlaude:latest >/dev/null
 fi
