@@ -19,6 +19,24 @@ name="${name:-anticlaude-home}"
 
 mkdir -p "$HOME/.claude"
 
+expected_image=$(podman inspect -f '{{.Id}}' anticlaude:latest 2>/dev/null || true)
+
+# Check if existing container is outdated
+if podman container exists "$name" 2>/dev/null; then
+    container_image=$(podman inspect -f '{{.Image}}' "$name" 2>/dev/null || true)
+    if [[ -z "$expected_image" || "$container_image" != "$expected_image" ]]; then
+        echo "Container '$name' uses a different image than anticlaude:latest"
+        read -rp "Recreate container? [y/N] " answer
+        if [[ "$answer" == [yY]* ]]; then
+            if ! podman rm "$name" >/dev/null 2>&1; then
+                echo "Error: Cannot remove container '$name' — other sessions may still be running." >&2
+                echo "Exit all other anticlaude sessions for this project first." >&2
+                exit 1
+            fi
+        fi
+    fi
+fi
+
 # Ensure container is running (detached)
 if podman container exists "$name" 2>/dev/null; then
     state=$(podman inspect -f '{{.State.Status}}' "$name")
