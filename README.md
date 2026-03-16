@@ -1,21 +1,23 @@
-# Anticlaude - Containerized Claude Code CLI
+# Anticlaude - Containerized AI Coding Agents
 
-A Podman container for running the Claude Code CLI in an isolated, reproducible environment. This container provides a consistent development experience across different systems while maintaining separation between your host system and Claude Code's dependencies.
+A Podman container for running AI coding agents (Claude Code, Codex) in an isolated, reproducible environment. This container provides a consistent development experience across different systems while maintaining separation between your host system and agent dependencies.
 
 ## Overview
 
-Anticlaude is a containerized version of Anthropic's Claude Code CLI that:
+Anticlaude is a containerized harness for AI coding agents that:
+- Supports multiple agents: **Claude Code** (`anticlaude`) and **Codex** (`anticodex`)
 - Runs in an isolated Ubuntu-based environment
-- Automatically updates Claude Code on container startup
-- Preserves your Claude configuration across container restarts
+- Preserves agent configuration across container restarts
 - Creates persistent containers per working directory (installed packages survive sessions)
+- Both agents share the same container — toolchains installed by one are available to the other
 - Mounts your current working directory as the workspace
 - Runs as a non-root user for security
 
 ## Prerequisites
 
 - Podman installed on your system
-- An Anthropic API key (will be configured on first run)
+- An Anthropic API key for Claude Code (will be configured on first run)
+- An OpenAI API key for Codex (optional, only needed if using Codex)
 - Sufficient permissions to build containers and mount volumes
 
 ### NixOS
@@ -58,29 +60,35 @@ Re-run the command to update your version of claude.
 
 The build process will:
 1. Start from the latest Ubuntu base image
-2. Install required dependencies (curl, ca-certificates, git, python3)
+2. Install required dependencies (curl, ca-certificates, git, python3, nodejs, npm)
 3. Create a non-root user `anticlaude` with UID/GID 1000
-4. Install the Claude Code CLI
+4. Install the Claude Code CLI and the Codex CLI
 
 ## Running the Container
 
 ### Quick Start
 
-Copy the `anticlaude` script to your PATH:
+Copy the `anticlaude` script to your PATH and create the `anticodex` symlink:
 
 ```bash
 ln -s "$(pwd)/anticlaude" ~/.local/bin/anticlaude
+ln -s "$(pwd)/anticlaude" ~/.local/bin/anticodex
 ```
 
-Then run Claude Code from any directory:
+Then run an agent from any directory:
 
 ```bash
-anticlaude
+anticlaude   # launches Claude Code with --dangerously-skip-permissions
+anticodex    # launches Codex with --full-auto
 ```
+
+The agent is inferred from the invocation name (`anticlaude` → `claude`, `anticodex` → `codex`). Both agents share the same container per working directory, so toolchains installed by one agent are available to the other.
 
 ### First Run
 
-On first run, Claude Code will prompt you to configure your API key. The configuration will be persisted in `$HOME/.claude` on your host system.
+On first run, the agent will prompt you to configure your API key. Configuration is persisted on your host system in `$HOME/.claude` (for Claude Code) and `$HOME/.codex` (for Codex).
+
+The very first invocation in a new container will also ask the agent to install the necessary toolchains for the repository. This initialization happens once per container, regardless of which agent triggers it.
 
 ### Container Persistence
 
@@ -119,15 +127,21 @@ alias anticlaude="podman run --userns=keep-id -it --rm -v \$HOME/.claude:/home/a
 
 ## Volume Mounts
 
-The container uses two volume mounts:
+The container uses the following volume mounts:
 
-### 1. Configuration Directory
+### 1. Claude Configuration Directory
 - **Host Path**: `$HOME/.claude`
 - **Container Path**: `/home/anticlaude/.claude`
 - **Purpose**: Stores Claude Code configuration, including API keys and settings
 - **Persistence**: Data persists across container restarts
 
-### 2. Workspace Directory
+### 2. Codex Configuration Directory
+- **Host Path**: `$HOME/.codex`
+- **Container Path**: `/home/anticlaude/.codex`
+- **Purpose**: Stores Codex configuration, including API keys and settings
+- **Persistence**: Data persists across container restarts
+
+### 3. Workspace Directory
 - **Host Path**: `$(pwd)` (current working directory)
 - **Container Path**: `$(pwd)` (same as host path)
 - **Purpose**: Your project files that Claude Code will operate on

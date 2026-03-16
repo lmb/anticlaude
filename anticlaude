@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+agent="${0##*/}"
+agent="${agent#anti}"
+
 workdir="$(pwd)"
 
 if [[ -n "${STARDIR:-}" ]] && [[ "$workdir" == "$STARDIR" || "$workdir" == "$STARDIR/"* ]]; then
@@ -18,6 +21,7 @@ name="anticlaude-${name//\//-}"
 name="${name:-anticlaude-home}"
 
 mkdir -p "$HOME/.claude"
+mkdir -p "$HOME/.codex"
 
 expected_image=$(podman inspect -f '{{.Id}}' anticlaude:latest 2>/dev/null || true)
 
@@ -46,11 +50,12 @@ if podman container exists "$name" 2>/dev/null; then
 else
     podman run --name "$name" --userns=keep-id -d \
         -v "$HOME/.claude:/home/anticlaude/.claude:z" \
+        -v "$HOME/.codex:/home/anticlaude/.codex:z" \
         -v "$HOME/.gitconfig:/home/anticlaude/.gitconfig:ro,z" \
         -v "$HOME/.config/git:/home/anticlaude/.config/git:ro,z" \
         -v "$workdir:$workdir:z" -w "$workdir" \
         anticlaude:latest >/dev/null
 fi
 
-# Start a claude session in the running container
-exec podman exec -it "$name" run-claude "$@"
+# Start an agent session in the running container
+exec podman exec -it "$name" run-agent "$agent" "$@"

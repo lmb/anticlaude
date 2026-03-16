@@ -13,6 +13,7 @@ ENV USER=anticlaude \
 
 # Set environment variables for mountpoints
 ENV CLAUDE_CONFIG_DIR=${HOME}/.claude \
+    CODEX_CONFIG_DIR=${HOME}/.codex \
     WORKSPACE=${HOME}/workspace
 
 # Install dependencies
@@ -25,6 +26,8 @@ RUN apt-get update && \
     sudo \
     nano \
     procps \
+    nodejs \
+    npm \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user with passwordless sudo
@@ -32,10 +35,11 @@ RUN groupadd -g ${GID} ${USER} && \
     useradd -m -u ${UID} -g ${GID} -d ${HOME} -s /bin/bash ${USER} && \
     echo "${USER} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/${USER}
 
-# Create config directory mount point
+# Create config directory mount points
 RUN mkdir -p ${CLAUDE_CONFIG_DIR} && chmod +x ${CLAUDE_CONFIG_DIR}
+RUN mkdir -p ${CODEX_CONFIG_DIR} && chmod +x ${CODEX_CONFIG_DIR}
 RUN mkdir -p ${WORKSPACE} && chmod +x ${WORKSPACE}
-RUN chown -R ${UID}:${GID} ${WORKSPACE} ${CLAUDE_CONFIG_DIR}
+RUN chown -R ${UID}:${GID} ${WORKSPACE} ${CLAUDE_CONFIG_DIR} ${CODEX_CONFIG_DIR}
 
 # Switch to non-root user
 USER ${USER}
@@ -53,9 +57,9 @@ ENV CLAUDE_CLI_CONFIG_DIR=${CLAUDE_CONFIG_DIR}
 COPY --chown=${UID}:${GID} entrypoint.sh ${HOME}/entrypoint.sh
 RUN chmod +x ${HOME}/entrypoint.sh
 
-# Copy run-claude helper
-COPY --chown=${UID}:${GID} run-claude.sh /usr/local/bin/run-claude
-RUN chmod +x /usr/local/bin/run-claude
+# Copy run-agent helper
+COPY --chown=${UID}:${GID} run-agent.sh /usr/local/bin/run-agent
+RUN chmod +x /usr/local/bin/run-agent
 
 # Set entrypoint to run updates on container start
 ENTRYPOINT ["/home/anticlaude/entrypoint.sh"]
@@ -63,6 +67,9 @@ ENTRYPOINT ["/home/anticlaude/entrypoint.sh"]
 # Install Claude Code CLI
 ARG CLAUDE_CACHEBUST=1
 RUN curl -fsSL https://claude.ai/install.sh | /bin/bash
+
+# Install Codex CLI
+RUN sudo npm install -g @openai/codex
 
 # Set working directory for projects
 WORKDIR ${HOME}/workspace
