@@ -19,6 +19,9 @@ source env files or modify PATH inline as part of verification. Create an empty
 file at $MARKER_FILE once verified.
 EOF
 
+# Make claude not complain about running as root
+export IS_SANDBOX=1
+
 if [[ ! -f "$MARKER_FILE" ]]; then
     exec "$agent" $agent_flags "$instructions" "$@"
 else
