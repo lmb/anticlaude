@@ -48,11 +48,15 @@ if podman container exists "$name" 2>/dev/null; then
         podman start "$name" >/dev/null
     fi
 else
+    git_mounts=""
+    [[ -e "$HOME/.gitconfig" ]] && git_mounts+=" -v $HOME/.gitconfig:/home/anticlaude/.gitconfig:ro,z"
+    [[ -e "$HOME/.config/git" ]] && git_mounts+=" -v $HOME/.config/git:/home/anticlaude/.config/git:ro,z"
+
+    # shellcheck disable=SC2086  # String $git_mounts is intentionally unquoted
     podman run --name "$name" --userns=keep-id -d \
         -v "$HOME/.claude:/home/anticlaude/.claude:z" \
         -v "$HOME/.codex:/home/anticlaude/.codex:z" \
-        -v "$HOME/.gitconfig:/home/anticlaude/.gitconfig:ro,z" \
-        -v "$HOME/.config/git:/home/anticlaude/.config/git:ro,z" \
+        $git_mounts \
         -v "$workdir:$workdir:z" -w "$workdir" \
         anticlaude:latest >/dev/null
 fi
