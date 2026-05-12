@@ -5,6 +5,12 @@ set -euo pipefail
 agent="${0##*/}"
 agent="${agent#anti}"
 
+case "$agent" in
+    claude) agent_flags="--dangerously-skip-permissions" ;;
+    codex)  agent_flags="--dangerously-bypass-approvals-and-sandbox" ;;
+    *)      echo "Error: unknown agent '$agent'" >&2; exit 1 ;;
+esac
+
 workdir="$(pwd)"
 
 if [[ -n "${STARDIR:-}" ]] && [[ "$workdir" == "$STARDIR" || "$workdir" == "$STARDIR/"* ]]; then
@@ -12,51 +18,5 @@ if [[ -n "${STARDIR:-}" ]] && [[ "$workdir" == "$STARDIR" || "$workdir" == "$STA
     exit 1
 fi
 
-if [[ "$workdir" == "$HOME"* ]]; then
-    name="${workdir#$HOME/}"
-else
-    name="${workdir#/}"
-fi
-name="anticlaude-${name//\//-}"
-name="${name:-anticlaude-home}"
-
-mkdir -p "$HOME/.claude"
-mkdir -p "$HOME/.codex"
-
-expected_image=$(podman inspect -f '{{.Id}}' anticlaude:latest 2>/dev/null || true)
-
-# Check if existing container is outdated
-if podman container exists "$name" 2>/dev/null; then
-    container_image=$(podman inspect -f '{{.Image}}' "$name" 2>/dev/null || true)
-    if [[ -z "$expected_image" || "$container_image" != "$expected_image" ]]; then
-        echo "Container '$name' uses a different image than anticlaude:latest"
-        read -rp "Recreate container? [y/N] " answer
-        if [[ "$answer" == [yY]* ]]; then
-            if ! podman rm "$name" >/dev/null 2>&1; then
-                echo "Error: Cannot remove container '$name' — other sessions may still be running." >&2
-                echo "Exit all other anticlaude sessions for this project first." >&2
-                exit 1
-            fi
-        fi
-    fi
-fi
-
-# Ensure container is running (detached)
-if podman container exists "$name" 2>/dev/null; then
-    state=$(podman inspect -f '{{.State.Status}}' "$name")
-    if [[ "$state" != "running" ]]; then
-        podman start "$name" >/dev/null
-    fi
-else
-    podman run --name "$name" \
-        --uidmap 0:0:1 --uidmap 1:1:65536 --cap-add=sys_admin --device /dev/fuse -d \
-        -v "$HOME/.claude:/root/.claude:z" \
-        -v "$HOME/.codex:/root/.codex:z" \
-        -v "$HOME/.gitconfig:/root/.gitconfig:ro,z" \
-        -v "$HOME/.config/git:/root/.config/git:ro,z" \
-        -v "$workdir:$workdir:z" -w "$workdir" \
-        anticlaude:latest >/dev/null
-fi
-
-# Start an agent session in the running container
-exec podman exec -it "$name" run-agent "$agent" "$@"
+# Start an agent session in the vm
+exec limactl shell --workdir "$workdir" default "$agent" $agent_flags "$@"

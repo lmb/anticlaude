@@ -1,215 +1,77 @@
-# Anticlaude - Containerized AI Coding Agents
+# Anticlaude - AI Coding Agents in a Lima VM
 
-A Podman container for running AI coding agents (Claude Code, Codex) in an isolated, reproducible environment. This container provides a consistent development experience across different systems while maintaining separation between your host system and agent dependencies.
+A wrapper that runs AI coding agents (Claude Code, Codex) inside a [Lima](https://lima-vm.io/) VM, isolating agent execution from your host system while giving you a consistent, reproducible environment.
 
 ## Overview
 
-Anticlaude is a containerized harness for AI coding agents that:
+Anticlaude is a thin shim around `limactl shell` that:
 - Supports multiple agents: **Claude Code** (`anticlaude`) and **Codex** (`anticodex`)
-- Runs in an isolated Ubuntu-based environment
-- Preserves agent configuration across container restarts
-- Creates persistent containers per working directory (installed packages survive sessions)
-- Both agents share the same container — toolchains installed by one are available to the other
-- Mounts your current working directory as the workspace
-- Runs as a non-root user for security
+- Runs each agent inside a shared Lima VM named `default`
+- Preserves your current working directory inside the VM (`limactl shell --workdir`)
+- Passes the appropriate "skip permissions" flag for each agent automatically
+- Refuses to run inside `$STARDIR` (or any subdirectory) as a safety check
 
 ## Prerequisites
 
-- Podman installed on your system
-- An Anthropic API key for Claude Code (will be configured on first run)
+- [Lima](https://lima-vm.io/) installed on your system, with a running instance named `default`
+- An Anthropic API key for Claude Code (configured on first run)
 - An OpenAI API key for Codex (optional, only needed if using Codex)
-- Sufficient permissions to build containers and mount volumes
+- The agent CLIs (`claude`, `codex`) installed inside the Lima VM and available on `PATH`
 
-### NixOS
+### Creating the Lima VM
 
-Add the following to configuration.nix to enable podman:
-
-```
-  # Enable Podman for container management
-  virtualisation.podman = {
-    enable = true;
-
-    # Required for containers under podman-compose to be able to talk to each other.
-    defaultNetwork.settings.dns_enabled = true;
-  };
-
-  # Configure container registries
-  virtualisation.containers.registries.search = [
-    "docker.io"
-    "quay.io"
-    "ghcr.io"
-  ];
-
-  # Optional: Add your user to the podman group for rootless containers
-  users.users.$USER = {
-    isNormalUser = true;
-    uid = 1000;
-    extraGroups = [ "wheel" "networkmanager" "podman" ]; # added "podman"
-  };
-```
-
-## Building the Container
-
-Build the container image from the repo root:
+If you don't already have a `default` Lima instance, create one:
 
 ```bash
-./build.sh
+limactl start default
 ```
 
-Re-run the command to update your version of claude.
+Then install the agent CLIs inside the VM (e.g. via `limactl shell default`) so that `claude` and `codex` are on the VM's `PATH`.
 
-The build process will:
-1. Start from the latest Ubuntu base image
-2. Install required dependencies (curl, ca-certificates, git, python3, nodejs, npm)
-3. Create a non-root user `anticlaude` with UID/GID 1000
-4. Install the Claude Code CLI and the Codex CLI
+## Installation
 
-## Running the Container
-
-### Quick Start
-
-Copy the `anticlaude` script to your PATH and create the `anticodex` symlink:
+Symlink the `anticlaude` script onto your `PATH` and create the `anticodex` alias:
 
 ```bash
 ln -s "$(pwd)/anticlaude" ~/.local/bin/anticlaude
 ln -s "$(pwd)/anticlaude" ~/.local/bin/anticodex
 ```
 
-Then run an agent from any directory:
+The agent to launch is inferred from the invocation name (`anticlaude` → `claude`, `anticodex` → `codex`).
+
+## Running an Agent
+
+From any directory on the host:
 
 ```bash
 anticlaude   # launches Claude Code with --dangerously-skip-permissions
-anticodex    # launches Codex with --full-auto
+anticodex    # launches Codex with --dangerously-bypass-approvals-and-sandbox
 ```
 
-The agent is inferred from the invocation name (`anticlaude` → `claude`, `anticodex` → `codex`). Both agents share the same container per working directory, so toolchains installed by one agent are available to the other.
+Any additional arguments are forwarded to the underlying agent.
 
-### First Run
+### Working Directory
 
-On first run, the agent will prompt you to configure your API key. Configuration is persisted on your host system in `$HOME/.claude` (for Claude Code) and `$HOME/.codex` (for Codex).
+The script invokes `limactl shell --workdir "$(pwd)" default ...`, so the agent starts in the same path inside the VM as on the host. By default Lima mounts your home directory into the VM, which means most working directories Just Work; if your project lives outside the default mounts, configure additional mounts in your Lima instance's `lima.yaml`.
 
-The very first invocation in a new container will also ask the agent to install the necessary toolchains for the repository. This initialization happens once per container, regardless of which agent triggers it.
+### STARDIR Guard
 
-### Container Persistence
+If the `STARDIR` environment variable is set and your current directory is inside it, the script refuses to start. This prevents launching an agent in a directory it shouldn't touch.
 
-The `anticlaude` script creates persistent containers named after your working directory:
+## Configuration
 
-| Working Directory | Container Name |
-|-------------------|----------------|
-| `~/dev/foo` | `anticlaude-dev-foo` |
-| `~/projects/bar` | `anticlaude-projects-bar` |
-| `/tmp/test` | `anticlaude-tmp-test` |
-| `~/` | `anticlaude-home` |
-
-This means packages installed inside a container persist across sessions for that directory.
-
-### Managing Containers
-
-List anticlaude containers:
-
-```bash
-podman ps -a --filter "name=anticlaude-"
-```
-
-Remove a specific container:
-
-```bash
-podman rm anticlaude-dev-foo
-```
-
-### Ephemeral Mode
-
-If you prefer ephemeral containers that are removed on exit, use this alias instead:
-
-```bash
-alias anticlaude="podman run --userns=keep-id -it --rm -v \$HOME/.claude:/home/anticlaude/.claude:z -v \$(pwd):\$(pwd):z -w \$(pwd) anticlaude:latest"
-```
-
-## Volume Mounts
-
-The container uses the following volume mounts:
-
-### 1. Claude Configuration Directory
-- **Host Path**: `$HOME/.claude`
-- **Container Path**: `/home/anticlaude/.claude`
-- **Purpose**: Stores Claude Code configuration, including API keys and settings
-- **Persistence**: Data persists across container restarts
-
-### 2. Codex Configuration Directory
-- **Host Path**: `$HOME/.codex`
-- **Container Path**: `/home/anticlaude/.codex`
-- **Purpose**: Stores Codex configuration, including API keys and settings
-- **Persistence**: Data persists across container restarts
-
-### 3. Workspace Directory
-- **Host Path**: `$(pwd)` (current working directory)
-- **Container Path**: `$(pwd)` (same as host path)
-- **Purpose**: Your project files that Claude Code will operate on
-- **Persistence**: Changes are reflected immediately on the host filesystem
-- **Note**: The container uses `-w $(pwd)` to set the working directory to match the host path, enabling Claude to categorize conversations by project path
-
-## Configuration Assumptions
-
-### User ID/Group ID
-- The container creates a user `anticlaude` with UID 1000 and GID 1000
-- This matches the default user ID on most Linux systems
-- If your host user has a different UID/GID, you may encounter permission issues with mounted volumes
-
-### SELinux Considerations
-- The `:z` suffix on volume mounts enables SELinux relabeling
-- This allows the container to access mounted volumes on SELinux-enabled systems (Fedora, RHEL, CentOS, etc.)
-
-### User Namespace Mapping
-- The `--userns=keep-id` flag preserves your host user ID inside the container
-- This ensures files created in mounted volumes have the correct ownership
-
-## Limitations
-
-### UID/GID Mismatch
-If your host user ID is not 1000, you may need to:
-- Rebuild the container with your specific UID/GID in the Dockerfile
-- Use rootless Podman with user namespace mapping
-- Adjust file permissions manually
-
-### Network Access
-The container requires internet access to:
-- Install Claude Code during the build
-- Update Claude Code on startup
-- Communicate with Anthropic's API during operation
-
-### Automatic Updates
-- The entrypoint script automatically runs `claude update` on container startup
-- This ensures you're always running the latest version
-- Initial startup may take a few seconds while updates are checked/applied
-- If you want to skip updates, you would need to modify the entrypoint script
-
-### Host System Integration
-- The container runs in isolation and doesn't have direct access to host system services
-- Host GUI applications cannot be launched from within the container
-- System-level tools on the host are not available inside the container
-
-### Container Persistence
-- The `anticlaude` script creates persistent containers per working directory
-- Packages installed inside a container persist across sessions
-- Use the ephemeral mode alias if you prefer containers that are removed on exit
-- Container data is stored in Podman's default location
+Agent configuration (API keys, settings) lives inside the Lima VM under the agent's usual paths (`~/.claude`, `~/.codex` for the VM user). Because the VM is persistent, configuration survives across sessions.
 
 ## Troubleshooting
 
-### Permission Denied Errors
-If you encounter permission errors with volume mounts:
-- Check that `$HOME/.claude` exists and is writable
-- Verify your user ID matches the container's UID (1000)
-- On SELinux systems, ensure the `:z` flag is used with Podman
+### `limactl: command not found`
+Install Lima and ensure it's on your `PATH`.
 
-### API Key Issues
-If Claude Code can't find your API key:
-- Ensure the config volume is properly mounted
-- Check that `$HOME/.claude` contains your configuration
-- Try running `claude configure` inside the container
+### `instance "default" does not exist` or stopped
+Run `limactl start default` to create or start the VM.
 
-### Update Failures
-If the entrypoint update fails:
-- Check your internet connection
-- Verify you can access `https://claude.ai`
-- The entrypoint script will attempt to recover by running `claude install` first
+### Agent not found inside the VM
+Install the agent CLI inside the VM (`limactl shell default`, then install `claude` / `codex`) and confirm it's on the VM user's `PATH`.
+
+### Files not visible inside the VM
+Check the `mounts:` section of your Lima instance config and add the path your project lives in if it isn't already covered.
